@@ -46,8 +46,10 @@
 #ifndef __MEM_CACHE_CACHE_BLK_HH__
 #define __MEM_CACHE_CACHE_BLK_HH__
 
+#include <bitset>
 #include <cassert>
 #include <cstdint>
+#include <fstream>
 #include <iosfwd>
 #include <limits>
 #include <list>
@@ -93,7 +95,7 @@ class CacheBlk : public TaggedEntry
          */
         AllBits  =          0x0E,
     };
-
+    std::ofstream ofs;
     /**
      * Contains a copy of the data in this block for easy access. This is used
      * for efficient execution when the data could be actually stored in
@@ -102,7 +104,7 @@ class CacheBlk : public TaggedEntry
      * referenced by this block.
      */
     uint8_t *data = nullptr;
-
+    std::bitset<64> accessBits; // assuming a 64-byte block size
     /**
      * Which curTick() will this block be accessible. Its value is only
      * meaningful if the block is valid.
@@ -153,7 +155,7 @@ class CacheBlk : public TaggedEntry
     std::list<Lock> lockList;
 
   public:
-    CacheBlk()
+    CacheBlk(): ofs("/home/vardan/Desktop/sem5/ACA/final_project/Gem5-AmoebaCache/gem5_custom/myLogs/invalidation.log", std::ios::app)
     {
         invalidate();
     }
@@ -194,7 +196,9 @@ class CacheBlk : public TaggedEntry
 
         return *this;
     }
-    virtual ~CacheBlk() {};
+    virtual ~CacheBlk() {
+        ofs.close();
+    };
 
     /**
      * Invalidate the block and clear all state.
@@ -203,15 +207,34 @@ class CacheBlk : public TaggedEntry
     {
         TaggedEntry::invalidate();
 
+        ofs << "Invalidating Block\tAccessedBits: " << accessBits.count() << std::endl;
+
         clearPrefetched();
         clearCoherenceBits(AllBits);
-
+        resetAccessBits();
         setTaskId(context_switch_task_id::Unknown);
         setPartitionId(std::numeric_limits<uint64_t>::max());
         setWhenReady(MaxTick);
         setRefCount(0);
         setSrcRequestorId(Request::invldRequestorId);
         lockList.clear();
+
+
+
+    }
+
+
+    void markAccess(Addr addr, int size, std::string from = "NULL") {
+
+        int block_offset = addr % 64; // Calculate offset within the block
+        for (int i = 0; i < size; ++i) {
+            this->accessBits.set(block_offset + i); // Mark bits as accessed
+        }
+
+    }
+
+    std::pair<int,int> getAccessData() {
+        return {accessBits.count(), accessBits.size()};
     }
 
     /**
@@ -282,6 +305,15 @@ class CacheBlk : public TaggedEntry
     {
         assert(tick >= _tickInserted);
         whenReady = tick;
+    }
+
+    /*
+     * Reset the access bits all to 0 when the block is invalidated
+     * so that when new data loaded in this entry the accessBits are all 0
+     */
+    void resetAccessBits() {
+
+        accessBits.reset();
     }
 
     /** Get the task id associated to this block. */

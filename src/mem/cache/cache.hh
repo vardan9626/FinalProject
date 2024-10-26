@@ -72,6 +72,7 @@ class Cache : public BaseCache
      */
     const bool doFastWrites;
 
+
     /**
      * Store the outstanding requests that we are expecting snoop
      * responses from so we can determine which snoop responses we
@@ -116,7 +117,7 @@ class Cache : public BaseCache
     Tick recvAtomicSnoop(PacketPtr pkt) override;
 
     void satisfyRequest(PacketPtr pkt, CacheBlk *blk,
-                        bool deferred_response = false,
+                        bool   deferred_response = false,
                         bool pending_downgrade = false) override;
 
     void doTimingSupplyResponse(PacketPtr req_pkt, const uint8_t *blk_data,

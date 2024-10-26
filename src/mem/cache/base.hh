@@ -316,6 +316,8 @@ class BaseCache : public ClockedObject
 
     CpuSidePort cpuSidePort;
     MemSidePort memSidePort;
+    uint64_t totalByteAccess;
+    uint64_t totalBytesStored;
 
   protected:
 
@@ -1057,6 +1059,11 @@ class BaseCache : public ClockedObject
 
         const BaseCache &cache;
 
+
+        /* Total number of accessed bytes*/
+        statistics::Scalar totalByteAccessStats;
+        /* Total number of stored bytes*/
+        statistics::Scalar totalByteStoredStats;
         /** Number of hits for demand accesses. */
         statistics::Formula demandHits;
         /** Number of hit for all accesses. */

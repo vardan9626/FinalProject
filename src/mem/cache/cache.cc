@@ -63,6 +63,7 @@
 #include "mem/request.hh"
 #include "params/Cache.hh"
 
+
 namespace gem5
 {
 
@@ -72,6 +73,8 @@ Cache::Cache(const CacheParams &p)
 {
     assert(p.tags);
     assert(p.replacement_policy);
+    totalByteAccess = 0;
+    totalBytesStored = 0;
 }
 
 void
@@ -964,7 +967,15 @@ Cache::evictBlock(CacheBlk *blk)
         writebackBlk(blk) : cleanEvictBlk(blk);
 
     invalidateBlock(blk);
-
+    auto [totalSetBits, totalBits] = blk->getAccessData();
+    // DPRINTF(CacheEvict, "Evicting block %s\n", blk->print());
+    if (totalSetBits) {
+        // totalByteAccess+=totalSetBits;
+        // totalBytesStored+=totalBits;
+        stats.totalByteAccessStats+=totalSetBits;
+        stats.totalByteStoredStats+=totalBits;
+    }
+    blk->invalidate();
     return pkt;
 }
 

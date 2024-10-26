@@ -138,6 +138,8 @@ BaseCache::BaseCache(const BaseCacheParams &p, unsigned blk_size)
         "Compressed cache %s does not have a compression algorithm", name());
     if (compressor)
         compressor->setCache(this);
+
+
 }
 
 BaseCache::~BaseCache()
@@ -786,6 +788,7 @@ BaseCache::updateBlockData(CacheBlk *blk, const PacketPtr cpkt,
 
     // Actually perform the data update
     if (cpkt) {
+        // blk->markAccess(cpkt->getAddr(), cpkt->getSize(), "updateBlockData");
         cpkt->writeDataToBlock(blk->data, blkSize);
     }
 
@@ -1379,6 +1382,7 @@ BaseCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
         assert(!pkt->needsResponse());
 
         updateBlockData(blk, pkt, has_old_data);
+        blk->markAccess(pkt->getAddr(), pkt->getSize(), "access");
         DPRINTF(Cache, "%s new state is %s\n", __func__, blk->print());
         incHitCount(pkt);
 
@@ -1454,6 +1458,7 @@ BaseCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
         assert(!pkt->needsResponse());
 
         updateBlockData(blk, pkt, has_old_data);
+        blk->markAccess(pkt->getAddr(), pkt->getSize(), "access");
         DPRINTF(Cache, "%s new state is %s\n", __func__, blk->print());
 
         incHitCount(pkt);
@@ -1486,6 +1491,7 @@ BaseCache::access(PacketPtr pkt, CacheBlk *&blk, Cycles &lat,
         }
 
         satisfyRequest(pkt, blk);
+        blk->markAccess(pkt->getAddr(), pkt->getSize(), "access");
         maintainClusivity(pkt->fromCache(), blk);
 
         return true;
@@ -1605,7 +1611,7 @@ BaseCache::handleFill(PacketPtr pkt, CacheBlk *blk, PacketList &writebacks,
         // sanity checks
         assert(pkt->hasData());
         assert(pkt->getSize() == blkSize);
-
+        // blk->markAccess(pkt->getAddr(), pkt->getSize(), "handelFill");
         updateBlockData(blk, pkt, has_old_data);
     }
     // The block will be ready when the payload arrives and the fill is done
@@ -1693,6 +1699,7 @@ BaseCache::invalidateBlock(CacheBlk *blk)
     } else {
         tempBlock->invalidate();
     }
+
 }
 
 void
@@ -2288,6 +2295,10 @@ BaseCache::CacheStats::CacheStats(BaseCache &c)
              "number of data expansions"),
     ADD_STAT(dataContractions, statistics::units::Count::get(),
              "number of data contractions"),
+    ADD_STAT(totalByteAccessStats, statistics::units::Count::get(), "Total number of bytes accessed"),
+    ADD_STAT(totalByteStoredStats, statistics::units::Count::get(), "Total number of bytes stored"),
+
+
     cmd(MemCmd::NUM_MEM_CMDS)
 {
     for (int idx = 0; idx < MemCmd::NUM_MEM_CMDS; ++idx)
@@ -2517,6 +2528,9 @@ BaseCache::CacheStats::regStats()
 
     dataExpansions.flags(nozero | nonan);
     dataContractions.flags(nozero | nonan);
+
+    totalByteAccessStats.desc("Total number of bytes accessed");
+    totalByteStoredStats.desc("Total number of bytes stored");
 }
 
 void

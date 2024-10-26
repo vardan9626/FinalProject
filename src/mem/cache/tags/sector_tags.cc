@@ -174,7 +174,7 @@ SectorTags::accessBlock(const PacketPtr pkt, Cycles &lat)
     if (blk != nullptr) {
         // Update number of references to accessed block
         blk->increaseRefCount();
-
+        blk->markAccess(pkt->getAddr(), pkt->getSize(), "accessBlock");
         // Get block's sector
         SectorSubBlk* sub_blk = static_cast<SectorSubBlk*>(blk);
         const SectorBlk* sector_blk = sub_blk->getSectorBlock();
